@@ -39,3 +39,41 @@ if ('IntersectionObserver' in window && !reducedMotion.matches) {
   }), {threshold:.06});
   document.querySelectorAll('.chapter-copy,.honest,.goodbye').forEach(el => {el.classList.add('reveal');observer.observe(el);});
 }
+
+// Browsers decide whether audible autoplay is allowed. A first gesture is the fallback.
+const music = document.querySelector('#background-music');
+const musicToggle = document.querySelector('#music-toggle');
+const musicState = document.querySelector('#music-state');
+const musicIcon = document.querySelector('#music-icon');
+let musicStarted = false;
+let musicUserPaused = false;
+music.volume = 0.35;
+function updateMusicControl() {
+  const playing = !music.paused;
+  musicToggle.setAttribute('aria-pressed', String(playing));
+  musicToggle.setAttribute('aria-label', playing ? 'Pause background music' : 'Play background music');
+  musicIcon.textContent = playing ? 'Ⅱ' : '▶';
+  musicState.textContent = playing ? 'Frank Ocean · Playing' : 'Frank Ocean · Tap to play';
+}
+async function startMusic() {
+  try { await music.play(); }
+  catch (error) {
+    if (!musicUserPaused && music.paused) {
+      musicState.textContent = error.name === 'NotAllowedError' ? 'Frank Ocean · Tap to play' : 'Couldn’t play · Tap to retry';
+    }
+  }
+}
+music.addEventListener('play', () => { musicStarted = true; updateMusicControl(); });
+music.addEventListener('pause', updateMusicControl);
+music.addEventListener('error', () => { musicState.textContent = 'Audio unavailable · Try refreshing'; });
+musicToggle.addEventListener('click', () => {
+  if (music.paused) { musicUserPaused = false; startMusic(); }
+  else { musicUserPaused = true; music.pause(); }
+});
+function startOnFirstGesture(event) {
+  if (event.target instanceof Element && event.target.closest('#music-toggle')) return;
+  if (!musicStarted && !musicUserPaused) startMusic();
+}
+document.addEventListener('pointerdown', startOnFirstGesture, {passive:true});
+document.addEventListener('keydown', startOnFirstGesture);
+startMusic();
